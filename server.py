@@ -107,22 +107,23 @@ class Server:
          print (treqbody)
          print ("<--")
 
+         # split on space "GET /file.html" -into-> ('GET','file.html',...)
+         file_requested = treq.split(' ')
+         file_requested = file_requested[1] # get 2nd element
+
+         #Check for URL arguments. Disregard them
+         file_requested = file_requested.split('?')[0]  # disregard anything after '?'
+
+         if (file_requested == '/'):  # in case no file is specified by the browser
+             file_requested = '/index.html' # load index.html by default
+         elif (file_requested == '/favicon.ico'):  # most browsers ask for this file...
+             file_requested = '/index.html' # ...giving them index.html instead
+
+         file_requested = self.www_dir + file_requested
+         print ("Serving web page [",file_requested,"]")
+
+# GET method
          if (request_method == 'GET') | (request_method == 'HEAD'):
-
-             # split on space "GET /file.html" -into-> ('GET','file.html',...)
-             file_requested = treq.split(' ')
-             file_requested = file_requested[1] # get 2nd element
-
-             #Check for URL arguments. Disregard them
-             file_requested = file_requested.split('?')[0]  # disregard anything after '?'
-
-             if (file_requested == '/'):  # in case no file is specified by the browser
-                 file_requested = '/index.html' # load index.html by default
-             elif (file_requested == '/favicon.ico'):  # most browsers ask for this file...
-                 file_requested = '/index.html' # ...giving them index.html instead
-
-             file_requested = self.www_dir + file_requested
-             print ("Serving web page [",file_requested,"]")
 
              ## Load file content
              try:
@@ -150,26 +151,18 @@ class Server:
              print ("Closing connection with client")
              conn.close()
 
+# POST method
          elif (request_method == 'POST'):
-
-             # split on space "GET /file.html" -into-> ('GET','file.html',...)
-             file_requested = treq.split(' ')
-             file_requested = file_requested[1] # get 2nd element
-
-             #Check for URL arguments. Disregard them
-             file_requested = file_requested.split('?')[0]  # disregard anything after '?'
-
-             if (file_requested == '/'):  # in case no file is specified by the browser
-                 file_requested = '/index.html' # load index.html by default
-
-             file_requested = self.www_dir + file_requested
-             print ("Serving web page [",file_requested,"]")
 
              ## Load file content
              try:
                  if (file_requested.find("execposthandler") != -1):
                      print("... PM: running python code")
-                     response_content = posthandler.run(treqbody)
+                     if (len(treqbody) > 0 ):
+                     	response_content = posthandler.run(treqbody)
+                     else:
+	                     print("... PM: empty POST received")
+	                     response_content = b"<html><body><p>Error: EMPTY FORM RECEIVED</p><p>Python HTTP server</p></body></html>"
                  else:
                      file_handler = open(file_requested,'rb')
                      response_content = file_handler.read() # read file content
@@ -192,16 +185,6 @@ class Server:
 
          else:
              print("Unknown HTTP request method:", request_method)
-
-
-
-def graceful_shutdown(sig, dummy):
-    """ This function shuts down the server. It's triggered
-    by SIGINT signal """
-    s.shutdown() #shut down the server
-    import sys
-    sys.exit(1)
-
 
 
 ###########################################################
